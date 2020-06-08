@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: edgex-core-consul
+spec:
+  selector:
+    app: edgex-core-consul
+  ports:
+    - port: 8400
+      name: port-8400
+    - port: 8500
+      name: port-8500
+    - port: 8600
+      name: port-8600
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edgex-core-consul
+  labels:
+    app: edgex-core-consul
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: edgex-core-consul
+  template:
+    metadata:
+      name: edgex-core-consul
+      labels:
+        app: edgex-core-consul
+    spec:
+      volumes:
+        - name: consul-volume
+          persistentVolumeClaim:
+            claimName: edgex-core-consul-claim
+      containers:
+        - name: edgex-core-consul
+          image: edgexfoundry/docker-edgex-consul:1.2.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8400
+            - containerPort: 8500
+            - containerPort: 8600
+          env:
+            - name: EDGEX_DB
+              value: "redis"
+            - name: EDGEX_SECURE
+              value: "false"
+          envFrom:
+            - configMapRef:
+                name: edgex-env
+          readinessProbe:
+            tcpSocket:
+              port: 8500
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8500
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - mountPath: /consul/config
+              name: consul-volume
+            - mountPath: /consul/data
+              name: consul-volume
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: edgex-core-consul
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+    - host: consul.k8s
+      http:
+        paths:
+          - path: /(.*)
+            backend:
+              serviceName: edgex-core-consul
+              servicePort: 8500

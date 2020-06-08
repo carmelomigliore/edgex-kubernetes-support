@@ -1,0 +1,10 @@
+kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+resources:
+  - edgex-env.yml
+  - edgex-core-command.yaml
+  - edgex-core-data.yaml
+  - edgex-core-metadata.yaml
+  - edgex-redis.yaml
+  - edgex-support-scheduler.yaml
+  - edgex-device-virtual.yaml

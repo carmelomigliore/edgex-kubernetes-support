@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: edgex-redis
+  namespace: default
+spec:
+  selector:
+    app: edgex-redis
+  ports:
+    - port: 6379
+      name: port-6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edgex-redis
+  labels:
+    app: edgex-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: edgex-redis
+  template:
+    metadata:
+      name: edgex-redis
+      labels:
+        app: edgex-redis
+    spec:
+      nodeSelector:
+        nodetype: database
+      volumes:
+        - name: redis-volume
+          persistentVolumeClaim:
+            claimName: edgex-redis-claim
+      containers:
+        - name: edgex-redis
+          image: redis:5.0.8-alpine
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: edgex-env
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - mountPath: /data/db
+              name: redis-volume
